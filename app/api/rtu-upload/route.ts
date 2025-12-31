@@ -53,15 +53,18 @@ export async function POST(request: NextRequest) {
               
               // Upload with original filename and save mapping
               const originalPhotoName = existingPhotoName || photo.name
+              console.log(`[RTU Upload] Photo - Original: ${originalPhotoName}, Standard: ${standardFilename}`)
+              
               if (originalPhotoName && originalPhotoName !== standardFilename) {
                 await uploadToStorage(photo, originalPhotoName)
                 console.log(`[RTU Upload] Uploaded original photo: ${originalPhotoName}`)
                 
                 // Save mapping in database
-                const { error: dbError } = await (supabase
+                console.log(`[RTU Upload] Saving photo mapping to database: roll_no=${rollNo}`)
+                const { data, error: dbError } = await (supabase
                   .from('photo_mappings') as any)
                   .upsert({
-                    roll_no: rollNo,
+                    roll_no: rollNo.toUpperCase(),
                     original_photo: originalPhotoName,
                     updated_at: new Date().toISOString()
                   }, {
@@ -69,8 +72,12 @@ export async function POST(request: NextRequest) {
                   })
                 
                 if (dbError) {
-                  console.error('[RTU Upload] Failed to save photo mapping:', dbError)
+                  console.error('[RTU Upload] ❌ Failed to save photo mapping:', dbError)
+                } else {
+                  console.log('[RTU Upload] ✅ Successfully saved photo mapping')
                 }
+              } else {
+                console.log(`[RTU Upload] ⚠️ Skipping photo mapping - names match`)
               }
             } catch (saveError) {
               console.error('[RTU Upload] Failed to upload photo:', saveError)
@@ -92,15 +99,18 @@ export async function POST(request: NextRequest) {
               
               // Upload with original filename and save mapping
               const originalSignatureName = existingSignatureName || signature.name
+              console.log(`[RTU Upload] Signature - Original: ${originalSignatureName}, Standard: ${standardFilename}`)
+              
               if (originalSignatureName && originalSignatureName !== standardFilename) {
                 await uploadToStorage(signature, originalSignatureName)
                 console.log(`[RTU Upload] Uploaded original signature: ${originalSignatureName}`)
                 
                 // Save mapping in database
-                const { error: dbError } = await (supabase
+                console.log(`[RTU Upload] Saving signature mapping to database: roll_no=${rollNo}`)
+                const { data, error: dbError } = await (supabase
                   .from('photo_mappings') as any)
                   .upsert({
-                    roll_no: rollNo,
+                    roll_no: rollNo.toUpperCase(),
                     original_signature: originalSignatureName,
                     updated_at: new Date().toISOString()
                   }, {
@@ -108,8 +118,12 @@ export async function POST(request: NextRequest) {
                   })
                 
                 if (dbError) {
-                  console.error('[RTU Upload] Failed to save signature mapping:', dbError)
+                  console.error('[RTU Upload] ❌ Failed to save signature mapping:', dbError)
+                } else {
+                  console.log('[RTU Upload] ✅ Successfully saved signature mapping')
                 }
+              } else {
+                console.log(`[RTU Upload] ⚠️ Skipping signature mapping - names match`)
               }
             } catch (saveError) {
               console.error('[RTU Upload] Failed to upload signature:', saveError)
