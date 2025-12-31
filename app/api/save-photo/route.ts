@@ -54,30 +54,29 @@ export async function POST(request: NextRequest) {
     
     console.log(`[Save Photo] Original name: ${originalName}, Standard name: ${standardFilename}`)
     
-    if (originalName && originalName !== standardFilename) {
+    // ALWAYS save mapping - even if names match, we want to track the upload
+    if (originalName !== standardFilename) {
       // Also upload with original filename
       const originalUpload = await uploadToStorage(photo, originalName)
       console.log(`[Save Photo] Uploaded original filename: ${originalName}`)
-      
-      // Store mapping in database
-      console.log(`[Save Photo] Saving to database: roll_no=${rollNo}, original_photo=${originalName}`)
-      const { data, error: dbError } = await (supabase
-        .from('photo_mappings') as any)
-        .upsert({
-          roll_no: rollNo.toUpperCase(),
-          original_photo: originalName,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'roll_no'
-        })
-      
-      if (dbError) {
-        console.error('[Save Photo] ❌ Failed to save mapping:', dbError)
-      } else {
-        console.log('[Save Photo] ✅ Successfully saved mapping to database')
-      }
+    }
+    
+    // Store mapping in database
+    console.log(`[Save Photo] Saving to database: roll_no=${rollNo}, original_photo=${originalName}`)
+    const { data, error: dbError } = await (supabase
+      .from('photo_mappings') as any)
+      .upsert({
+        roll_no: rollNo.toUpperCase(),
+        original_photo: originalName,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'roll_no'
+      })
+    
+    if (dbError) {
+      console.error('[Save Photo] ❌ Failed to save mapping:', dbError)
     } else {
-      console.log(`[Save Photo] ⚠️ Skipping database save - original name matches standard name`)
+      console.log('[Save Photo] ✅ Successfully saved mapping to database')
     }
 
     return NextResponse.json({
