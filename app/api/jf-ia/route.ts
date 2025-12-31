@@ -54,7 +54,6 @@ async function generateImage(apiKey: string, prompt: string): Promise<string> {
       config: {
         numberOfImages: 1,
         aspectRatio: '16:9',
-        safetyFilterLevel: 'block_some',
         personGeneration: 'dont_allow', // Don't generate people to avoid identity issues
       }
     })
