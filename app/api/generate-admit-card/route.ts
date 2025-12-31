@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { checkPhotoExists } from '@/lib/storage'
+import { Student } from '@/lib/database.types'
 
 export const runtime = 'nodejs'
 
@@ -23,10 +24,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
 
+    // Type assertion for student
+    const studentData = student as Student
+
     // Check if photo exists in Supabase Storage
     const photoCheck = await checkPhotoExists(rollNo)
     
-    let photoUrl = photoCheck.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.student_name || rollNo)}&size=200&background=6366f1&color=fff`
+    let photoUrl = photoCheck.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(studentData.student_name || rollNo)}&size=200&background=6366f1&color=fff`
 
     // Generate HTML admit card
     const admitCardHtml = `
@@ -35,7 +39,7 @@ export async function POST(request: NextRequest) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admit Card - ${student.student_name}</title>
+  <title>Admit Card - ${studentData.student_name}</title>
   <style>
     * {
       margin: 0;
@@ -224,42 +228,42 @@ export async function POST(request: NextRequest) {
         <div class="info-section">
           <div class="info-field">
             <div class="info-label">Student Name</div>
-            <div class="info-value">${student.student_name || 'N/A'}</div>
+            <div class="info-value">${studentData.student_name || 'N/A'}</div>
           </div>
           
           <div class="info-field">
             <div class="info-label">Roll Number</div>
-            <div class="info-value">${student.roll_no}</div>
+            <div class="info-value">${studentData.roll_no}</div>
           </div>
           
           <div class="info-field">
             <div class="info-label">Enrollment No</div>
-            <div class="info-value">${student.enrollment_no || 'N/A'}</div>
+            <div class="info-value">${studentData.enrollment_no || 'N/A'}</div>
           </div>
           
           <div class="info-field">
             <div class="info-label">Father's Name</div>
-            <div class="info-value">${student.father_name || 'N/A'}</div>
+            <div class="info-value">${studentData.father_name || 'N/A'}</div>
           </div>
           
           <div class="info-field">
             <div class="info-label">Mother's Name</div>
-            <div class="info-value">${student.mother_name || 'N/A'}</div>
+            <div class="info-value">${studentData.mother_name || 'N/A'}</div>
           </div>
           
           <div class="info-field">
             <div class="info-label">Branch</div>
-            <div class="info-value">${student.branch || 'N/A'}</div>
+            <div class="info-value">${studentData.branch || 'N/A'}</div>
           </div>
           
           <div class="info-field">
             <div class="info-label">Section</div>
-            <div class="info-value">${student.student_section || 'N/A'}</div>
+            <div class="info-value">${studentData.student_section || 'N/A'}</div>
           </div>
           
           <div class="info-field">
             <div class="info-label">Mobile No</div>
-            <div class="info-value">${student.mobile_no || 'N/A'}</div>
+            <div class="info-value">${studentData.mobile_no || 'N/A'}</div>
           </div>
         </div>
         
