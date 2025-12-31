@@ -48,7 +48,7 @@ async function generateImage(apiKey: string, prompt: string): Promise<string> {
   const ai = new GoogleGenAI({ apiKey })
   
   try {
-    const result = await ai.models.generateImage({
+    const result = await ai.models.generateImages({
       model: 'gemini-2.5-flash-image',
       prompt: prompt,
       config: {
