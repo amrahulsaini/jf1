@@ -1,0 +1,9 @@
+{
+  "_description": "This file maps roll numbers to their original RTU Portal filenames for photos and signatures",
+  "_format": {
+    "ROLLNO": {
+      "originalPhoto": "original_photo_filename.jpg",
+      "originalSignature": "original_signature_filename.jpg"
+    }
+  }
+}

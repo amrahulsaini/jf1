@@ -2,6 +2,16 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Environment Variables
+
+Create `.env.local` with:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `RTU_SESSION_ID` (optional, required for RTU features)
+- `RTU_AUTH_TOKEN` (optional, required for RTU features)
+- `GEMINI_API_KEY` (required for `/jf-ia`)
+
 First, run the development server:
 
 ```bash
