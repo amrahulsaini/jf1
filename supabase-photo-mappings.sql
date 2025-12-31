@@ -10,13 +10,19 @@ CREATE TABLE IF NOT EXISTS photo_mappings (
 -- Enable RLS (Row Level Security)
 ALTER TABLE photo_mappings ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Allow public read access" ON photo_mappings;
+DROP POLICY IF EXISTS "Allow public insert" ON photo_mappings;
+DROP POLICY IF EXISTS "Allow public update" ON photo_mappings;
+
+-- Allow public read access (no authentication needed)
 CREATE POLICY "Allow public read access" ON photo_mappings
-  FOR SELECT TO public USING (true);
+  FOR SELECT TO anon, authenticated USING (true);
 
--- Allow public insert/update (you can make this more restrictive later)
+-- Allow public insert (no authentication needed)
 CREATE POLICY "Allow public insert" ON photo_mappings
-  FOR INSERT TO public WITH CHECK (true);
+  FOR INSERT TO anon, authenticated WITH CHECK (true);
 
+-- Allow public update (no authentication needed)
 CREATE POLICY "Allow public update" ON photo_mappings
-  FOR UPDATE TO public USING (true);
+  FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
