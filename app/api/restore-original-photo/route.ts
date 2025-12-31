@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
     // Restore Photo
     if (mapping.original_photo) {
       try {
+        console.log(`[Restore Original] Attempting to download: ${mapping.original_photo}`)
+        
         // Download original photo from Supabase Storage
         const { data: originalPhotoData, error: downloadError } = await supabase
           .storage
@@ -50,8 +52,11 @@ export async function POST(request: NextRequest) {
           .download(mapping.original_photo)
 
         if (downloadError) {
-          results.photo.message = `Failed to download original: ${downloadError.message}`
+          console.error(`[Restore Original] Download error:`, downloadError)
+          results.photo.message = `Failed to download original: ${downloadError.message} - File may not exist in storage. Upload a new photo first.`
         } else {
+          console.log(`[Restore Original] Successfully downloaded ${mapping.original_photo}, size: ${originalPhotoData.size} bytes`)
+          
           // Upload it as the standardized photo
           const standardPhotoName = `photo_${rollNoUpper}.jpg`
           const { error: uploadError } = await supabase
@@ -63,6 +68,7 @@ export async function POST(request: NextRequest) {
             })
 
           if (uploadError) {
+            console.error(`[Restore Original] Upload error:`, uploadError)
             results.photo.message = `Failed to restore photo: ${uploadError.message}`
           } else {
             results.photo.success = true
@@ -71,10 +77,11 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (error: any) {
+        console.error(`[Restore Original] Exception:`, error)
         results.photo.message = `Error: ${error.message}`
       }
     } else {
-      results.photo.message = 'No original photo found'
+      results.photo.message = 'No original photo found in database'
     }
 
     // Restore Signature
