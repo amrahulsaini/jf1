@@ -569,10 +569,17 @@ export default function StudentDetailPage() {
                                   const result = await response.json()
 
                                   if (result.success) {
-                                    alert(`✅ Success!\n\n${result.message}\n\nPhoto: ${result.uploadedPhoto ? 'Uploaded' : 'Not uploaded'}\nSignature: ${result.uploadedSignature ? 'Uploaded' : 'Not uploaded'}\n\n👉 Click the "Refresh Images" button above to see your updated photos!`)
+                                    alert(`✅ Success!\n\n${result.message}\n\nPhoto: ${result.uploadedPhoto ? 'Uploaded' : 'Not uploaded'}\nSignature: ${result.uploadedSignature ? 'Uploaded' : 'Not uploaded'}\n\nImages will refresh automatically!`)
                                     form.reset()
                                     // Auto-refresh images after successful upload
                                     setImageTimestamp(Date.now())
+                                    // Force refresh the modal data
+                                    if (showRtuSecret && student) {
+                                      setShowRtuSecret(false)
+                                      setTimeout(() => {
+                                        setShowRtuSecret(true)
+                                      }, 100)
+                                    }
                                   } else {
                                     alert(`❌ Upload failed\n\n${result.error || 'Unknown error'}`)
                                   }
