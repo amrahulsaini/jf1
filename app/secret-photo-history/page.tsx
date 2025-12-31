@@ -278,27 +278,12 @@ export default function SecretPhotoHistoryPage() {
                               View
                             </a>
                           </div>
-                        )div className="flex items-center gap-2">
-                          <a
-                            href={`/students/${mapping.roll_no}`}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                          >
-                            View Profile
-                          </a>
-                          {(mapping.original_photo || mapping.original_signature) && (
-                            <button
-                              onClick={() => restoreOriginal(mapping.roll_no)}
-                              disabled={restoring === mapping.roll_no}
-                              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                                restoring === mapping.roll_no
-                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                  : 'bg-green-600 text-white hover:bg-green-700'
-                              }`}
-                            >
-                              {restoring === mapping.roll_no ? '⏳ Restoring...' : '🔄 Make Original'}
-                            </button>
-                          )}
-                        </divpping.original_signature ? (
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {mapping.original_signature ? (
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">
                               {mapping.original_signature}
@@ -322,12 +307,27 @@ export default function SecretPhotoHistoryPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <a
-                          href={`/students/${mapping.roll_no}`}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          View Profile →
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`/students/${mapping.roll_no}`}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            View Profile
+                          </a>
+                          {(mapping.original_photo || mapping.original_signature) && (
+                            <button
+                              onClick={() => restoreOriginal(mapping.roll_no)}
+                              disabled={restoring === mapping.roll_no}
+                              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                                restoring === mapping.roll_no
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-green-600 text-white hover:bg-green-700'
+                              }`}
+                            >
+                              {restoring === mapping.roll_no ? '⏳ Restoring...' : '🔄 Make Original'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
