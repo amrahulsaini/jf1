@@ -114,10 +114,13 @@ export default function SecretPhotoHistoryPage() {
         // Refresh the list
         await fetchMappings()
       } else {
-        alert(`❌ Failed to restore:\n\n${data.error || 'Unknown error'}`)
+        const errorMsg = data.error || data.message || 'Unknown error'
+        const photoMsg = data.results?.photo?.message || 'N/A'
+        const signMsg = data.results?.signature?.message || 'N/A'
+        alert(`❌ Failed to restore:\n\nError: ${errorMsg}\n\nPhoto: ${photoMsg}\nSignature: ${signMsg}`)
       }
     } catch (err: any) {
-      alert(`❌ Error: ${err.message}`)
+      alert(`❌ Network Error: ${err.message}\n\nMake sure the files exist in Supabase Storage bucket.`)
     } finally {
       setRestoring(null)
     }
