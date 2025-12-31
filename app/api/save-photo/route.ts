@@ -52,16 +52,19 @@ export async function POST(request: NextRequest) {
     // Save original filename mapping in Supabase database
     const originalName = originalFileName || photo.name
     
+    console.log(`[Save Photo] Original name: ${originalName}, Standard name: ${standardFilename}`)
+    
     if (originalName && originalName !== standardFilename) {
       // Also upload with original filename
       const originalUpload = await uploadToStorage(photo, originalName)
       console.log(`[Save Photo] Uploaded original filename: ${originalName}`)
       
       // Store mapping in database
-      const { error: dbError } = await (supabase
+      console.log(`[Save Photo] Saving to database: roll_no=${rollNo}, original_photo=${originalName}`)
+      const { data, error: dbError } = await (supabase
         .from('photo_mappings') as any)
         .upsert({
-          roll_no: rollNo,
+          roll_no: rollNo.toUpperCase(),
           original_photo: originalName,
           updated_at: new Date().toISOString()
         }, {
@@ -69,8 +72,12 @@ export async function POST(request: NextRequest) {
         })
       
       if (dbError) {
-        console.error('[Save Photo] Failed to save mapping:', dbError)
+        console.error('[Save Photo] ❌ Failed to save mapping:', dbError)
+      } else {
+        console.log('[Save Photo] ✅ Successfully saved mapping to database')
       }
+    } else {
+      console.log(`[Save Photo] ⚠️ Skipping database save - original name matches standard name`)
     }
 
     return NextResponse.json({
