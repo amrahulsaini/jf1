@@ -473,6 +473,13 @@ export default function StudentDetailPage() {
                                     />
                                   </div>
                                   <p className="text-xs text-gray-500 mt-2 text-center">{student.photoPath}</p>
+                                  <a
+                                    href={`${student.photoUrl}${student.photoUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`}
+                                    download={`${student.rollNo}_photo.jpg`}
+                                    className="mt-3 w-full block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium text-center transition-colors"
+                                  >
+                                    📥 Download Photo
+                                  </a>
                                 </div>
                               )}
 
@@ -490,6 +497,13 @@ export default function StudentDetailPage() {
                                     />
                                   </div>
                                   <p className="text-xs text-gray-500 mt-2 text-center">{student.signaturePath}</p>
+                                  <a
+                                    href={`${student.signatureUrl}${student.signatureUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`}
+                                    download={`${student.rollNo}_signature.jpg`}
+                                    className="mt-3 w-full block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium text-center transition-colors"
+                                  >
+                                    📥 Download Signature
+                                  </a>
                                 </div>
                               )}
                             </div>
