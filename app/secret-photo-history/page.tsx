@@ -21,6 +21,7 @@ export default function SecretPhotoHistoryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [restoring, setRestoring] = useState<string | null>(null)
 
   useEffect(() => {
     fetchMappings()
@@ -91,6 +92,35 @@ export default function SecretPhotoHistoryPage() {
     if (!filename) return null
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     return `${supabaseUrl}/storage/v1/object/public/student-photos/${filename}`
+  }
+
+  async function restoreOriginal(rollNo: string) {
+    if (!confirm(`Restore original photo and signature for ${rollNo}?\n\nThis will replace the current files with the original ones.`)) {
+      return
+    }
+
+    setRestoring(rollNo)
+    try {
+      const res = await fetch('/api/restore-original-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rollNo })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        alert(`✅ Success!\n\nPhoto: ${data.results.photo.message}\nSignature: ${data.results.signature.message}`)
+        // Refresh the list
+        await fetchMappings()
+      } else {
+        alert(`❌ Failed to restore:\n\n${data.error || 'Unknown error'}`)
+      }
+    } catch (err: any) {
+      alert(`❌ Error: ${err.message}`)
+    } finally {
+      setRestoring(null)
+    }
   }
 
   if (loading) {
@@ -248,12 +278,27 @@ export default function SecretPhotoHistoryPage() {
                               View
                             </a>
                           </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        {mapping.original_signature ? (
+                        )div className="flex items-center gap-2">
+                          <a
+                            href={`/students/${mapping.roll_no}`}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            View Profile
+                          </a>
+                          {(mapping.original_photo || mapping.original_signature) && (
+                            <button
+                              onClick={() => restoreOriginal(mapping.roll_no)}
+                              disabled={restoring === mapping.roll_no}
+                              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                                restoring === mapping.roll_no
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-green-600 text-white hover:bg-green-700'
+                              }`}
+                            >
+                              {restoring === mapping.roll_no ? '⏳ Restoring...' : '🔄 Make Original'}
+                            </button>
+                          )}
+                        </divpping.original_signature ? (
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">
                               {mapping.original_signature}
