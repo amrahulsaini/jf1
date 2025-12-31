@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
     const recordCountsAndReturn = async (payload: any, status?: number) => {
       try {
         if (payload?.success) {
+          console.log(`[RTU Upload] ========== STARTING SUPABASE STORAGE UPLOAD ==========`)
+          console.log(`[RTU Upload] Roll No: ${rollNo}`)
+          console.log(`[RTU Upload] Photo provided: ${!!photo}, Signature provided: ${!!signature}`)
+          console.log(`[RTU Upload] Existing photo name from RTU: ${existingPhotoName || 'NONE'}`)
+          console.log(`[RTU Upload] Existing signature name from RTU: ${existingSignatureName || 'NONE'}`)
+          
           if (photo) await incrementMediaUpdate(rollNo, 'photo')
           if (signature) await incrementMediaUpdate(rollNo, 'signature')
           
