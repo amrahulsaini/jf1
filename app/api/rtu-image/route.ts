@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
+// @ts-ignore - exif-parser has no types
 import ExifParser from 'exif-parser'
 
 export async function GET(request: NextRequest) {
@@ -153,7 +154,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Check for server-side comments (developers sometimes leave these)
-    const serverComments = html.match(/<%--.*?--%>/gs)
+    const serverComments = html.match(/<%--[\s\S]*?--%>/g)
     if (serverComments && serverComments.length > 0) {
       console.log('[RTU Image] 💡 Server-side comments found:', serverComments.slice(0, 3))
     }

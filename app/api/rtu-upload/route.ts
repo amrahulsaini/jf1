@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
                 console.log(`[RTU Upload] Uploaded original photo: ${originalPhotoName}`)
                 
                 // Save mapping in database
-                const { error: dbError } = await supabase
-                  .from('photo_mappings')
+                const { error: dbError } = await (supabase
+                  .from('photo_mappings') as any)
                   .upsert({
                     roll_no: rollNo,
                     original_photo: originalPhotoName,
@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
                 console.log(`[RTU Upload] Uploaded original signature: ${originalSignatureName}`)
                 
                 // Save mapping in database
-                const { error: dbError } = await supabase
-                  .from('photo_mappings')
+                const { error: dbError } = await (supabase
+                  .from('photo_mappings') as any)
                   .upsert({
                     roll_no: rollNo,
                     original_signature: originalSignatureName,

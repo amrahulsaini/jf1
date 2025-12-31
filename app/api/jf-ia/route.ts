@@ -5,69 +5,6 @@ import type { Student } from '@/lib/database.types'
 
 export const runtime = 'nodejs'
 
-// Enhanced prompt templates for beautiful scenic images
-function enhanceImagePrompt(userPrompt: string): string {
-  const lower = userPrompt.toLowerCase()
-  
-  // Beach/ocean scenes
-  if (/(beach|ocean|sea|seaside|coast|shore)/i.test(lower)) {
-    return `Stunning ${userPrompt}, ultra high quality, professional photography, golden hour lighting, crystal clear turquoise waters, pristine white sand, gentle waves, palm trees swaying, dramatic sky with fluffy clouds, vibrant colors, 8k resolution, photorealistic, serene atmosphere, perfect composition`
-  }
-  
-  // Mountain/landscape scenes
-  if (/(mountain|hill|valley|landscape|peak)/i.test(lower)) {
-    return `Breathtaking ${userPrompt}, majestic peaks, dramatic lighting, epic vista, professional landscape photography, vivid colors, sharp details, golden hour, misty atmosphere, 8k ultra HD, photorealistic, stunning composition`
-  }
-  
-  // Forest/nature scenes
-  if (/(forest|jungle|tree|woodland|nature|garden)/i.test(lower)) {
-    return `Beautiful ${userPrompt}, lush greenery, dappled sunlight filtering through canopy, vibrant flora, professional nature photography, rich colors, peaceful atmosphere, high detail, 8k resolution, photorealistic`
-  }
-  
-  // City/urban scenes
-  if (/(city|urban|street|building|skyline)/i.test(lower)) {
-    return `Stunning ${userPrompt}, modern architecture, dynamic composition, vibrant city lights, professional photography, golden hour or blue hour lighting, sharp details, 8k ultra HD, cinematic atmosphere`
-  }
-  
-  // Sunset/sunrise scenes
-  if (/(sunset|sunrise|dawn|dusk|twilight)/i.test(lower)) {
-    return `Spectacular ${userPrompt}, dramatic sky with vibrant colors, golden and pink hues, silhouettes, professional photography, breathtaking atmosphere, vivid saturation, 8k ultra HD, perfect composition`
-  }
-  
-  // Sky/clouds scenes
-  if (/(sky|cloud|aurora|star)/i.test(lower)) {
-    return `Magnificent ${userPrompt}, dramatic atmosphere, vivid colors, professional astrophotography or sky photography, stunning details, ethereal beauty, 8k ultra HD, breathtaking composition`
-  }
-  
-  // Default enhancement for any scene
-  return `Beautiful ${userPrompt}, professional photography, stunning composition, vibrant colors, perfect lighting, high detail, 8k ultra HD, photorealistic, atmospheric, cinematic quality`
-}
-
-// Generate image using Google's Gemini Flash Image model
-async function generateImage(apiKey: string, prompt: string): Promise<string> {
-  const ai = new GoogleGenAI({ apiKey })
-  
-  try {
-    const result = await ai.models.generateImages({
-      model: 'gemini-2.5-flash-image',
-      prompt: prompt,
-      config: {
-        numberOfImages: 1,
-        aspectRatio: '16:9',
-      }
-    })
-    
-    if (result?.images?.[0]?.imageData) {
-      // Return base64 data URL
-      return `data:image/png;base64,${result.images[0].imageData}`
-    }
-    
-    throw new Error('No image generated')
-  } catch (error: any) {
-    throw new Error(`Image generation failed: ${error?.message || 'Unknown error'}`)
-  }
-}
-
 type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
@@ -168,34 +105,15 @@ function extractNameAfterSection(message: string): string | null {
   return name
 }
 
-// Common scenic/natural keywords that indicate image generation, not student names
-const SCENIC_KEYWORDS = [
-  'sunset', 'sunrise', 'beach', 'ocean', 'sea', 'mountain', 'mountains', 'hill', 'valley',
-  'forest', 'jungle', 'tree', 'lake', 'river', 'waterfall', 'sky', 'cloud', 'clouds',
-  'landscape', 'nature', 'scenery', 'view', 'city', 'building', 'skyline', 'garden',
-  'flower', 'desert', 'snow', 'ice', 'aurora', 'stars', 'galaxy', 'space', 'wave',
-  'waves', 'sand', 'cliff', 'canyon', 'field', 'meadow', 'farm', 'countryside',
-  'island', 'tropical', 'paradise', 'horizon', 'twilight', 'dawn', 'dusk', 'night',
-  'lightning', 'rainbow', 'autumn', 'spring', 'summer', 'winter', 'rain', 'storm'
-]
-
 function extractNameAfterOfOrFor(message: string): string | null {
   const t = (message || '').trim()
-  // Examples: "photo of rajat kumar", "generate image for rajat kumar"
+  // Examples: "photo of rajat kumar", "show image for rajat kumar"
   const m = t.match(/\b(of|for)\b\s+(.+)/i)
   if (!m) return null
   const name = (m[2] || '').trim()
   if (!name) return null
+  // If they actually typed a roll number, don't treat as name.
   if (extractRollNo(name)) return null
-  
-  // Check if it's a scenic keyword - if so, it's not a student name
-  const lowerName = name.toLowerCase()
-  for (const keyword of SCENIC_KEYWORDS) {
-    if (lowerName.includes(keyword)) {
-      return null // This is a scenic request, not a student name
-    }
-  }
-  
   return name
 }
 
@@ -391,87 +309,7 @@ export async function POST(request: NextRequest) {
     const history = Array.isArray(body.messages) ? body.messages : []
     const clientContext = body.context
 
-    // Check if this is an image generation request for general scenes (not student photos)
-    const isImageGenerationRequest = /(generate|create|make|show me|draw|paint|design).*\b(image|picture|photo|scene|view|visual)\b/i.test(userMessage)
-    
-    // Check if message contains scenic keywords
-    const lowerMessage = userMessage.toLowerCase()
-    const hasScenicKeyword = SCENIC_KEYWORDS.some(keyword => lowerMessage.includes(keyword))
-    
-    // It's a student photo request only if:
-    // 1. It has a name that's NOT a scenic keyword
-    // 2. OR has a roll number
-    // 3. OR explicitly mentions "student", "identity", "id", "passport"
-    const extractedName = extractNameAfterOfOrFor(userMessage)
-    const hasRollNo = extractRollNo(userMessage) !== null
-    const hasStudentKeyword = /(student|identity|id card|passport).*\b(photo|picture|image)\b/i.test(userMessage)
-    const isStudentPhotoRequest = (extractedName !== null || hasRollNo || hasStudentKeyword) && !hasScenicKeyword
-    
-    // Allow general image generation (beaches, landscapes, etc.), but block student identity photo generation
-    if (isImageGenerationRequest && isStudentPhotoRequest) {
-      const maybeName = extractNameAfterOfOrFor(userMessage)
-      if (maybeName) {
-        const matches = await fetchAllStudentsBySearch({ query: maybeName, limit: 10 })
-        if (matches.length === 0) {
-          return NextResponse.json({
-            success: true,
-            assistant:
-              `I can’t generate or alter a student’s identity photo, and I couldn’t find a student named "${maybeName}" in the database. Try a roll number or a more exact name.`,
-            proposedAction: null,
-          })
-        }
 
-        if (matches.length === 1) {
-          const details = safeStudentDetails(matches[0])
-          return NextResponse.json({
-            success: true,
-            assistant:
-              `I can’t generate or alter ${details.name || details.rollNo}’s identity photo.\n\nIf you want, I can show the current RTU photo/signature, or help you upload a real replacement photo you provide.`,
-            data: { student: details, view: { showStudentCard: false } },
-            proposedAction: null,
-          })
-        }
-
-        return NextResponse.json({
-          success: true,
-          assistant:
-            `I can’t generate or alter identity photos. I found multiple students for "${maybeName}" — which roll number do you mean?`,
-          data: { students: matches.map(summarizeStudent), view: { showStudentCard: false } },
-          proposedAction: null,
-        })
-      }
-
-      return NextResponse.json({
-        success: true,
-        assistant:
-          "I can’t generate or alter a student’s identity photo. If you tell me the student’s name, I’ll find the roll number for you. If you have the real new photo, I can help you upload it to RTU (I’ll ask for confirmation first).",
-        proposedAction: null,
-      })
-    }
-    // Handle general image generation requests (beaches, landscapes, etc.)
-    if (isImageGenerationRequest && !isStudentPhotoRequest) {
-      try {
-        const enhancedPrompt = enhanceImagePrompt(userMessage)
-        const imageUrl = await generateImage(apiKey, enhancedPrompt)
-        
-        return NextResponse.json({
-          success: true,
-          assistant: `I've generated a beautiful image for you! The scene shows: ${userMessage}`,
-          data: { 
-            generatedImage: imageUrl,
-            prompt: enhancedPrompt,
-            type: 'generated_image'
-          },
-          proposedAction: null,
-        })
-      } catch (error: any) {
-        return NextResponse.json({
-          success: true,
-          assistant: `I couldn't generate the image right now. ${error?.message || 'Please try again with a different description.'}`,
-          proposedAction: null,
-        })
-      }
-    }
     if (!userMessage && history.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No message provided.' },

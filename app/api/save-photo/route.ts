@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
       console.log(`[Save Photo] Uploaded original filename: ${originalName}`)
       
       // Store mapping in database
-      const { error: dbError } = await supabase
-        .from('photo_mappings')
+      const { error: dbError } = await (supabase
+        .from('photo_mappings') as any)
         .upsert({
           roll_no: rollNo,
           original_photo: originalName,
