@@ -310,13 +310,21 @@ export default function StudentDetailPage() {
               </button>
               
               <button 
-                onClick={() => {
-                  const link = document.createElement('a')
-                  link.href = `/student_photos/photo_${student.roll_no}.jpg?t=${Date.now()}`
-                  link.download = `photo_${student.roll_no}.jpg`
-                  document.body.appendChild(link)
-                  link.click()
-                  document.body.removeChild(link)
+                onClick={async () => {
+                  try {
+                    // Get photo URL from Supabase Storage
+                    const photoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/student-photos/photo_${student.roll_no}.jpg`
+                    const link = document.createElement('a')
+                    link.href = photoUrl
+                    link.download = `photo_${student.roll_no}.jpg`
+                    link.target = '_blank'
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                  } catch (error) {
+                    console.error('Error downloading photo:', error)
+                    alert('Failed to download photo')
+                  }
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center"
               >
@@ -659,7 +667,7 @@ export default function StudentDetailPage() {
                   <p className="text-sm font-medium text-gray-600 mb-3">Current Photo:</p>
                   <div className="flex justify-center">
                     <img 
-                      src={`/student_photos/photo_${rollNo}.jpg?t=${imageTimestamp}`}
+                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/student-photos/photo_${rollNo}.jpg?t=${imageTimestamp}`}
                       alt="Current photo"
                       className="w-32 h-32 rounded-lg object-cover border-4 border-gray-300"
                       onError={(e) => {

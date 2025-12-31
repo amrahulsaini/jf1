@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 import { incrementMediaUpdate } from '@/lib/media-updates'
-import { writeFile, mkdir, readFile } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { uploadToStorage } from '@/lib/storage'
+import { supabase } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
 
@@ -38,90 +37,83 @@ export async function POST(request: NextRequest) {
           if (photo) await incrementMediaUpdate(rollNo, 'photo')
           if (signature) await incrementMediaUpdate(rollNo, 'signature')
           
-          // Save photos locally with both standardized and original naming
-          const publicDir = join(process.cwd(), 'public', 'student_photos')
-          const dataDir = join(process.cwd(), 'data')
-          
-          if (!existsSync(publicDir)) {
-            await mkdir(publicDir, { recursive: true })
-          }
-          if (!existsSync(dataDir)) {
-            await mkdir(dataDir, { recursive: true })
-          }
-          
-          // Load existing filename mappings
-          const mappingFile = join(dataDir, 'photo-mappings.json')
-          let mappings: Record<string, { originalPhoto?: string, originalSignature?: string }> = {}
-          try {
-            if (existsSync(mappingFile)) {
-              const data = await readFile(mappingFile, 'utf-8')
-              mappings = JSON.parse(data)
-            }
-          } catch (e) {
-            console.log('[RTU Upload] Creating new mappings file')
-          }
-          
-          // Initialize mapping for this roll number if not exists
-          if (!mappings[rollNo]) {
-            mappings[rollNo] = {}
-          }
-          
+          // Upload photos to Supabase Storage
           if (photo) {
             try {
-              const photoBytes = await photo.arrayBuffer()
-              const photoBuffer = Buffer.from(photoBytes)
               const photoExtension = photo.type === 'image/png' ? 'png' : 'jpg'
-              
-              // Save with standardized name
               const standardFilename = `photo_${rollNo}.${photoExtension}`
-              const standardPath = join(publicDir, standardFilename)
-              await writeFile(standardPath, photoBuffer)
-              console.log(`[RTU Upload] Saved standardized photo: ${standardFilename}`)
               
-              // Save with original filename if we have it
+              // Upload with standardized name
+              const uploadResult = await uploadToStorage(photo, standardFilename)
+              if (uploadResult.success) {
+                console.log(`[RTU Upload] Uploaded standardized photo: ${standardFilename}`)
+              } else {
+                console.error(`[RTU Upload] Failed to upload photo: ${uploadResult.error}`)
+              }
+              
+              // Upload with original filename and save mapping
               const originalPhotoName = existingPhotoName || photo.name
               if (originalPhotoName && originalPhotoName !== standardFilename) {
-                const originalPath = join(publicDir, originalPhotoName)
-                await writeFile(originalPath, photoBuffer)
-                console.log(`[RTU Upload] Saved original photo: ${originalPhotoName}`)
-                mappings[rollNo].originalPhoto = originalPhotoName
+                await uploadToStorage(photo, originalPhotoName)
+                console.log(`[RTU Upload] Uploaded original photo: ${originalPhotoName}`)
+                
+                // Save mapping in database
+                const { error: dbError } = await supabase
+                  .from('photo_mappings')
+                  .upsert({
+                    roll_no: rollNo,
+                    original_photo: originalPhotoName,
+                    updated_at: new Date().toISOString()
+                  }, {
+                    onConflict: 'roll_no'
+                  })
+                
+                if (dbError) {
+                  console.error('[RTU Upload] Failed to save photo mapping:', dbError)
+                }
               }
             } catch (saveError) {
-              console.error('[RTU Upload] Failed to save local photo copy:', saveError)
+              console.error('[RTU Upload] Failed to upload photo:', saveError)
             }
           }
           
           if (signature) {
             try {
-              const signatureBytes = await signature.arrayBuffer()
-              const signatureBuffer = Buffer.from(signatureBytes)
               const signatureExtension = signature.type === 'image/png' ? 'png' : 'jpg'
-              
-              // Save with standardized name
               const standardFilename = `signature_${rollNo}.${signatureExtension}`
-              const standardPath = join(publicDir, standardFilename)
-              await writeFile(standardPath, signatureBuffer)
-              console.log(`[RTU Upload] Saved standardized signature: ${standardFilename}`)
               
-              // Save with original filename if we have it
+              // Upload with standardized name
+              const uploadResult = await uploadToStorage(signature, standardFilename)
+              if (uploadResult.success) {
+                console.log(`[RTU Upload] Uploaded standardized signature: ${standardFilename}`)
+              } else {
+                console.error(`[RTU Upload] Failed to upload signature: ${uploadResult.error}`)
+              }
+              
+              // Upload with original filename and save mapping
               const originalSignatureName = existingSignatureName || signature.name
               if (originalSignatureName && originalSignatureName !== standardFilename) {
-                const originalPath = join(publicDir, originalSignatureName)
-                await writeFile(originalPath, signatureBuffer)
-                console.log(`[RTU Upload] Saved original signature: ${originalSignatureName}`)
-                mappings[rollNo].originalSignature = originalSignatureName
+                await uploadToStorage(signature, originalSignatureName)
+                console.log(`[RTU Upload] Uploaded original signature: ${originalSignatureName}`)
+                
+                // Save mapping in database
+                const { error: dbError } = await supabase
+                  .from('photo_mappings')
+                  .upsert({
+                    roll_no: rollNo,
+                    original_signature: originalSignatureName,
+                    updated_at: new Date().toISOString()
+                  }, {
+                    onConflict: 'roll_no'
+                  })
+                
+                if (dbError) {
+                  console.error('[RTU Upload] Failed to save signature mapping:', dbError)
+                }
               }
             } catch (saveError) {
-              console.error('[RTU Upload] Failed to save local signature copy:', saveError)
+              console.error('[RTU Upload] Failed to upload signature:', saveError)
             }
-          }
-          
-          // Save updated mappings
-          try {
-            await writeFile(mappingFile, JSON.stringify(mappings, null, 2))
-            console.log(`[RTU Upload] Updated filename mappings for ${rollNo}`)
-          } catch (e) {
-            console.error('[RTU Upload] Failed to save mappings:', e)
           }
         }
       } catch (e) {

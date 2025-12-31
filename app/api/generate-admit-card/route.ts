@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { existsSync } from 'fs'
-import { join } from 'path'
+import { checkPhotoExists } from '@/lib/storage'
 
 export const runtime = 'nodejs'
 
@@ -24,22 +23,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
 
-    // Check if photo exists locally
-    const publicDir = join(process.cwd(), 'public', 'student_photos')
-    const photoPath = join(publicDir, `photo_${rollNo}.jpg`)
-    const pngPhotoPath = join(publicDir, `photo_${rollNo}.png`)
+    // Check if photo exists in Supabase Storage
+    const photoCheck = await checkPhotoExists(rollNo)
     
-    let photoUrl = `/student_photos/photo_${rollNo}.jpg`
-    
-    // Check if PNG exists instead
-    if (!existsSync(photoPath) && existsSync(pngPhotoPath)) {
-      photoUrl = `/student_photos/photo_${rollNo}.png`
-    }
-    
-    // If no photo exists locally, use placeholder
-    if (!existsSync(photoPath) && !existsSync(pngPhotoPath)) {
-      photoUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(student.student_name || rollNo)}&size=200&background=6366f1&color=fff`
-    }
+    let photoUrl = photoCheck.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.student_name || rollNo)}&size=200&background=6366f1&color=fff`
 
     // Generate HTML admit card
     const admitCardHtml = `

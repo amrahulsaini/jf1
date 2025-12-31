@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir, readFile } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { uploadToStorage } from '@/lib/storage'
+import { supabase } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
 
@@ -37,71 +36,49 @@ export async function POST(request: NextRequest) {
     // Create standardized filename: photo_ROLLNO.ext
     const standardFilename = `photo_${rollNo}.${extension}`
     
-    // Define the public directory path
-    const publicDir = join(process.cwd(), 'public', 'student_photos')
-    const dataDir = join(process.cwd(), 'data')
+    // Upload to Supabase Storage
+    console.log(`[Save Photo] Uploading ${standardFilename} to Supabase Storage...`)
+    const uploadResult = await uploadToStorage(photo, standardFilename)
     
-    // Ensure directories exist
-    if (!existsSync(publicDir)) {
-      await mkdir(publicDir, { recursive: true })
-    }
-    if (!existsSync(dataDir)) {
-      await mkdir(dataDir, { recursive: true })
-    }
-
-    // Convert File to Buffer
-    const bytes = await photo.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
-    // Save with standardized filename
-    const standardPath = join(publicDir, standardFilename)
-    await writeFile(standardPath, buffer)
-    console.log(`[Save Photo] Saved standardized photo: ${standardFilename}`)
-
-    // Load and update filename mappings
-    const mappingFile = join(dataDir, 'photo-mappings.json')
-    let mappings: Record<string, { originalPhoto?: string, originalSignature?: string }> = {}
-    try {
-      if (existsSync(mappingFile)) {
-        const data = await readFile(mappingFile, 'utf-8')
-        mappings = JSON.parse(data)
-      }
-    } catch (e) {
-      console.log('[Save Photo] Creating new mappings file')
+    if (!uploadResult.success) {
+      return NextResponse.json({
+        error: 'Failed to upload photo',
+        details: uploadResult.error
+      }, { status: 500 })
     }
 
-    // Initialize mapping for this roll number if not exists
-    if (!mappings[rollNo]) {
-      mappings[rollNo] = {}
-    }
+    console.log(`[Save Photo] Successfully uploaded: ${standardFilename}`)
 
-    // If original filename is provided or we can determine it, save with that name too
+    // Save original filename mapping in Supabase database
     const originalName = originalFileName || photo.name
-    const savedOriginalFiles: string[] = []
     
     if (originalName && originalName !== standardFilename) {
-      const originalPath = join(publicDir, originalName)
-      await writeFile(originalPath, buffer)
-      console.log(`[Save Photo] Saved original photo: ${originalName}`)
-      mappings[rollNo].originalPhoto = originalName
-      savedOriginalFiles.push(originalName)
-    }
-
-    // Save updated mappings
-    try {
-      await writeFile(mappingFile, JSON.stringify(mappings, null, 2))
-      console.log(`[Save Photo] Updated filename mappings for ${rollNo}`)
-    } catch (e) {
-      console.error('[Save Photo] Failed to save mappings:', e)
+      // Also upload with original filename
+      const originalUpload = await uploadToStorage(photo, originalName)
+      console.log(`[Save Photo] Uploaded original filename: ${originalName}`)
+      
+      // Store mapping in database
+      const { error: dbError } = await supabase
+        .from('photo_mappings')
+        .upsert({
+          roll_no: rollNo,
+          original_photo: originalName,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'roll_no'
+        })
+      
+      if (dbError) {
+        console.error('[Save Photo] Failed to save mapping:', dbError)
+      }
     }
 
     return NextResponse.json({
       success: true,
       message: 'Photo saved successfully',
       standardFilename: standardFilename,
-      originalFilenames: savedOriginalFiles,
-      standardPath: `/student_photos/${standardFilename}`,
-      mappings: mappings[rollNo]
+      photoUrl: uploadResult.url,
+      originalFilename: originalName !== standardFilename ? originalName : undefined
     })
 
   } catch (error) {
