@@ -1,42 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'nodejs'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const rollNo = searchParams.get('rollNo')
 
-    const dataDir = join(process.cwd(), 'data')
-    const mappingFile = join(dataDir, 'photo-mappings.json')
-
-    if (!existsSync(mappingFile)) {
-      return NextResponse.json({
-        success: true,
-        mappings: {},
-        message: 'No mappings file found'
-      })
-    }
-
-    const data = await readFile(mappingFile, 'utf-8')
-    const mappings = JSON.parse(data)
-
-    // If rollNo is provided, return only that student's mapping
     if (rollNo) {
+      // Get mapping for specific student
+      const { data: mapping, error } = await (supabase
+        .from('photo_mappings') as any)
+        .select('*')
+        .eq('roll_no', rollNo.toUpperCase())
+        .single()
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+        console.error('[Get Photo Mappings] Database error:', error)
+      }
+
       return NextResponse.json({
         success: true,
-        rollNo: rollNo,
-        mapping: mappings[rollNo] || null
+        rollNo: rollNo.toUpperCase(),
+        mapping: mapping || null
       })
     }
 
-    // Otherwise return all mappings
+    // Get all mappings
+    const { data: mappings, error } = await (supabase
+      .from('photo_mappings') as any)
+      .select('*')
+      .order('updated_at', { ascending: false })
+
+    if (error) {
+      console.error('[Get Photo Mappings] Database error:', error)
+      return NextResponse.json({
+        success: false,
+        error: error.message
+      }, { status: 500 })
+    }
+
     return NextResponse.json({
       success: true,
-      mappings: mappings
+      count: mappings?.length || 0,
+      mappings: mappings || []
     })
 
   } catch (error) {
